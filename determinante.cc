@@ -18,32 +18,32 @@ using matrix_t = row_t*;
  */
 struct Matrix {
   matrix_t data;
-  uint32_t rows;
-  uint32_t cols;
+  uint32_t st_rows;
+  uint32_t st_cols;
 };
 
 using fp_t = etype_t(*)(Matrix);
 
 
 /// Reserva la memoria para la matriz
-Matrix  mreserve(uint32_t r){
+Matrix mreserve(uint32_t st_r){
     Matrix m;
-    m.rows = r;
-    m.cols  = r;
-    uint32_t i = 0;
-    uint32_t j = 0;
+    m.st_rows = st_r;
+    m.st_cols  = st_r;
+    uint32_t stack_i = 0;
+    uint32_t stack_j = 0;
 
     //reservamos la memoria
-    m.data = new row_t[m.rows];
-    for (i = 0; i<m.rows; i++){
-        m.data[i] = new etype_t[m.cols];
+    m.data = new row_t[m.st_rows];
+    for (stack_i = 0; stack_i<m.st_rows; stack_i++){
+        m.data[stack_i] = new etype_t[m.st_cols];
     }
 
 
     //inicializamos la memoria 
-    for (i = 0; i<m.rows; i++){
-        for (j = 0; j<m.cols; j++){
-            m.data[i][j] = 0.0;
+    for (stack_i = 0; stack_i<m.st_rows; stack_i++){
+        for (stack_j = 0; stack_j<m.st_cols; stack_j++){
+            m.data[stack_i][stack_j] = 0.0;
         }
     }
 
@@ -52,8 +52,8 @@ Matrix  mreserve(uint32_t r){
 
 /// Libera la memoria de la matriz 
 void mfree(Matrix m){
-    for (uint32_t i = 0; i<m.rows; i++){
-        delete [] m.data[i]; 
+    for (uint32_t stack_i = 0; stack_i<m.st_rows; stack_i++){
+        delete [] m.data[stack_i]; 
     }
     delete [] m.data;
 }
@@ -61,48 +61,48 @@ void mfree(Matrix m){
 /// Calcula el determinante de m
 etype_t det(Matrix m){
     //Suponemos que es una matriz de rango 3
-    etype_t determinante = 0; 
+    etype_t ELF_determinante = 0; 
 
-    if (m.rows == 1){
-        determinante = m.data[0][0];
+    if (m.st_rows == 1){
+        ELF_determinante = m.data[0][0];
     }
     else {
-        Matrix aux = mreserve(m.rows-1);
-        aux.rows = m.rows-1;
-        aux.cols = m.cols-1;
+        Matrix stack_aux = mreserve(m.st_rows-1);
+        stack_aux.st_rows = m.st_rows-1;
+        stack_aux.st_cols = m.st_cols-1;
 
-        uint32_t i = 0;
-        uint32_t j = 0;
-        uint32_t f = 0;
-        uint32_t c = 0; 
-        uint32_t x = 0;
+        uint32_t stack_i = 0;
+        uint32_t stack_j = 0;
+        uint32_t stack_f = 0;
+        uint32_t stack_c = 0; 
+        uint32_t stack_x = 0;
 
-        for (x = 0; x<m.cols; x++){
+        for (stack_x = 0; stack_x<m.st_cols; stack_x++){
 
-            for (i = 1; i<m.rows; i++){
-                for (j = 0; j<m.cols; j++){
-                    if (j!=x){
-                        aux.data[f][c] = m.data[i][j];
-                        c++;
+            for (stack_i = 1; stack_i<m.st_rows; stack_i++){
+                for (stack_j = 0; stack_j<m.st_cols; stack_j++){
+                    if (stack_j!=stack_x){
+                        stack_aux.data[stack_f][stack_c] = m.data[stack_i][stack_j];
+                        stack_c++;
                     }
                 }
-                c = 0;
-                f++;
+                stack_c = 0;
+                stack_f++;
             }
-            determinante += (m.data[0][x])*(pow(-1,2+x))*(det(aux));
-            f = 0;
-            c = 0;
+            ELF_determinante += (m.data[0][stack_x])*(pow(-1,2+stack_x))*(det(stack_aux));
+            stack_f = 0;
+            stack_c = 0;
         } 
-        mfree(aux);
+        mfree(stack_aux);
     }
 
-    return determinante;
+    return ELF_determinante;
 }
 
 int main()
 {
-  uint32_t R = 4;
-  Matrix m = mreserve(R);
+  uint32_t rperez_R = 4;
+  Matrix auto_m = mreserve(rperez_R);
 
   // row 0
   m.data[0][0] = 1;
@@ -128,14 +128,14 @@ int main()
   m.data[3][2] = 18;
   m.data[3][3] = 29;
 
-  auto d = det(m);
+  auto auto_d = det(m);
 
   mfree(m);
 
   // Asegurarse de que el resultado esté en el rango [0, 255]
-  d = fmod(d, 256);
-  if (d < 0) {
-      d += 256;
+  auto_d = fmod(auto_d, 256);
+  if (auto_d < 0) {
+    auto_d += 256;
   }
 
   cout << d << endl;
