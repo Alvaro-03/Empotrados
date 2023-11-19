@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
-
+#include <omp.h>
 
 using etype_t_2 = float;
 using etype_t_1 = char;
@@ -53,6 +53,7 @@ template <typename T>
 Matriz<T> multiplicarMatricesParalelo(const Matriz<T>& a, const Matriz<T>& b, size_t filasA, size_t columnasA, size_t columnasB) {
     Matriz<T> resultado;
     resultado.datos = new T*[filasA];
+
 
     #pragma omp parallel for
     for (size_t i = 0; i < filasA; ++i) {
@@ -111,7 +112,8 @@ void liberarMatriz(Matriz<T>& matriz, size_t filas) {
 
 int main() {
 
-    for (int i = 100; i < 1500; i += 100){
+    for (int j = 1; j <= 10; j++){
+        int i = 700;
         // Medir el tiempo de ejecución
         clock_t start_secuencial, end_secuencial;
 
@@ -144,38 +146,15 @@ int main() {
         liberarMatriz(K, filas);
         liberarMatriz(R, filas);
 
-        // Medir el tiempo de ejecución para la versión paralela (monohebra)
-        clock_t start_monohebra, end_monohebra;
-        start_monohebra = clock();
-
-        Matriz<double> A_paralelo_monohebra = crearMatrizAleatoria<double>(filas, columnas);
-        Matriz<double> B_paralelo_monohebra = crearMatrizAleatoria<double>(filas, columnas);
-
-        Matriz<double> C_paralelo_monohebra = multiplicarMatricesParalelo<double>(A_paralelo_monohebra, B_paralelo_monohebra, filas, columnas, columnas);
-
-        Matriz<int> K_paralelo_monohebra = crearMatrizAleatoria<int>(filas, columnas);
-
-        Matriz<double> R_paralelo_monohebra = multiplicar_elemento_elemento_paralelo<double, int>(C_paralelo_monohebra, K_paralelo_monohebra, filas, columnas);
-
-        // Finalizar medición del tiempo para la versión paralela (monohebra)
-        end_monohebra = clock();
-
-        // Imprimir el tiempo de ejecución en segundos para la versión paralela (monohebra)
-        std::cout << "Tiempo de ejecución (paralelo, monohebra): " << static_cast<double>(end_monohebra - start_monohebra) / CLOCKS_PER_SEC << " segundos." << std::endl;
-
-        // Liberar memoria de las matrices en el heap
-        liberarMatriz(A_paralelo_monohebra, filas);
-        liberarMatriz(B_paralelo_monohebra, filas);
-        liberarMatriz(C_paralelo_monohebra, filas);
-        liberarMatriz(K_paralelo_monohebra, filas);
-        liberarMatriz(R_paralelo_monohebra, filas);
-
         // Medir el tiempo de ejecución para la versión paralela (dos o más hebras)
         clock_t start_multiples_hebras, end_multiples_hebras;
+        omp_set_num_threads(j);
+        std::cout << "el número de hebras es: " << j << std::endl;
         start_multiples_hebras = clock();
 
         Matriz<double> A_paralelo_multiples_hebras = crearMatrizAleatoria<double>(filas, columnas);
         Matriz<double> B_paralelo_multiples_hebras = crearMatrizAleatoria<double>(filas, columnas);
+
 
         Matriz<double> C_paralelo_multiples_hebras = multiplicarMatricesParalelo<double>(A_paralelo_multiples_hebras, B_paralelo_multiples_hebras, filas, columnas, columnas);
 
@@ -187,7 +166,7 @@ int main() {
         end_multiples_hebras = clock();
 
         // Imprimir el tiempo de ejecución en segundos para la versión paralela (dos o más hebras)
-        std::cout << "Tiempo de ejecución (paralelo, dos o más hebras): " << static_cast<double>(end_multiples_hebras - start_multiples_hebras) / CLOCKS_PER_SEC << " segundos." << std::endl;
+        std::cout << "Tiempo de ejecución (paralelo, "<< j << " hebras): " << static_cast<double>(end_multiples_hebras - start_multiples_hebras) / CLOCKS_PER_SEC << " segundos." << std::endl;
 
         // Liberar memoria de las matrices en el heap
         liberarMatriz(A_paralelo_multiples_hebras, filas);
@@ -197,12 +176,11 @@ int main() {
         liberarMatriz(R_paralelo_multiples_hebras, filas);
 
         // Calcular ganancias en velocidad (speedup)
-        double speedup_monohebra = static_cast<double>(end_secuencial - start_secuencial) / (end_monohebra - start_monohebra);
         double speedup_multiples_hebras = static_cast<double>(end_secuencial - start_secuencial) / (end_multiples_hebras - start_multiples_hebras);
 
-        // Imprimir ganancias en velocidad
-        std::cout << "Ganancia en velocidad (speedup) para monohebra: " << speedup_monohebra << std::endl;
-        std::cout << "Ganancia en velocidad (speedup) para dos o más hebras: " << speedup_multiples_hebras << std::endl;
+        // Imprimir ganancias en velocidad y eficiencia
+        std::cout << "Ganancia en velocidad (speedup) para " << j << " hebras: " << speedup_multiples_hebras << std::endl;
+        std::cout << "Eficiencia para " << j << " hebras: " << speedup_multiples_hebras/j << std::endl;
     }
 
     return 0;
