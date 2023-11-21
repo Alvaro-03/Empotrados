@@ -94,29 +94,33 @@ int main() {
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <omp.h>
 
-
-using etype_t_2 = float;
-using etype_t_1 = char;
-
-template <typename T>
-struct Matriz {
-    T** datos;
-};
+using etype_t_2 = double;
+using etype_t_1 = int;
 
 // Función para crear una matriz y llenarla con valores aleatorios entre 0 y 1
 template <typename T>
-Matriz<T> crearMatrizAleatoria(size_t filas, size_t columnas) {
-    // Inicializar la semilla para la generación de números aleatorios
-    std::srand(static_cast<unsigned etype_t_1>(std::time(nullptr)));
+T** crearMatrizAleatoria(int filas, int columnas) {
+    T** matriz = new T*[filas];
+    for (int i = 0; i < filas; ++i) {
+        matriz[i] = new T[columnas];
+        for (int j = 0; j < columnas; ++j) {
+            matriz[i][j] = static_cast<T>(std::rand()) / RAND_MAX;
+        }
+    }
 
-    // Crear la matriz en el heap
-    Matriz<T> matriz;
-    matriz.datos = new T*[filas];
-    for (size_t i = 0; i < filas; ++i) {
-        matriz.datos[i] = new T[columnas];
-        for (size_t j = 0; j < columnas; ++j) {
-            matriz.datos[i][j] = static_cast<T>(std::rand()) / RAND_MAX;
+    return matriz;
+}
+
+// Función para crear una matriz y llenarla con valores aleatorios entre 0 y 1
+template <typename T>
+T** crearIntMatrizAleatoria(int filas, int columnas) {
+    T** matriz = new T*[filas];
+    for (int i = 0; i < filas; ++i) {
+        matriz[i] = new T[columnas];
+        for (int j = 0; j < columnas; ++j) {
+            matriz[i][j] = static_cast<T>(std::rand()) % 256;
         }
     }
 
@@ -125,115 +129,69 @@ Matriz<T> crearMatrizAleatoria(size_t filas, size_t columnas) {
 
 // Función para multiplicar dos matrices
 template <typename T>
-Matriz<T> multiplicarMatrices(const Matriz<T>& a, const Matriz<T>& b, size_t filasA, size_t columnasA, size_t columnasB) {
-    Matriz<T> resultado;
-    resultado.datos = new T*[filasA];
-    for (size_t i = 0; i < filasA; ++i) {
-        resultado.datos[i] = new T[columnasB];
-        for (size_t j = 0; j < columnasB; ++j) {
-            resultado.datos[i][j] = 0.0;
-            for (size_t k = 0; k < columnasA; ++k) {
-                resultado.datos[i][j] += a.datos[i][k] * b.datos[k][j];
+void multiplicarMatrices(T** c, T** a, T** b, int filasA, int columnasA, int columnasB) {
+    for (int i = 0; i < filasA; ++i) {
+        for (int j = 0; j < columnasB; ++j) {
+            c[i][j] = 0.0;
+            for (int k = 0; k < columnasA; ++k) {
+                c[i][j] += a[i][k] * b[k][j];
             }
         }
     }
-
-    return resultado;
 }
 
 // Función para multiplicar elemento por elemento
 template <typename T, typename U>
-Matriz<T> multiplicar_elemento_elemento(const Matriz<T>& a, const Matriz<U>& b, size_t filas, size_t columnas) {
-    Matriz<T> resultado;
-    resultado.datos = new T*[filas];
-    for (size_t i = 0; i < filas; ++i) {
-        resultado.datos[i] = new T[columnas];
-        for (size_t j = 0; j < columnas; ++j) {
-            resultado.datos[i][j] = a.datos[i][j] * static_cast<T>(b.datos[i][j]);
+void multiplicar_elemento_elemento(T** r, T** a, U** b, int filas, int columnas) {
+    for (int i = 0; i < filas; ++i) {
+        for (int j = 0; j < columnas; ++j) {
+            r[i][j] = a[i][j] * static_cast<T>(b[i][j]);
         }
     }
-
-    return resultado;
 }
+
 
 // Función para liberar la memoria de una matriz
 template <typename T>
-void liberarMatriz(Matriz<T>& matriz, size_t filas) {
-    for (size_t i = 0; i < filas; ++i) {
-        delete[] matriz.datos[i];
+void liberarMatriz(T** matriz, int filas) {
+    for (int i = 0; i < filas; ++i) {
+        delete[] matriz[i];
     }
-    delete[] matriz.datos;
+    delete[] matriz;
 }
 
 int main() {
 
+    std::srand(std::time(0));
     for (int i = 100; i < 1500; i += 100){
-        // Medir el tiempo de ejecución
-        clock_t start, end;
-
-        // Crear matrices y realizar operaciones
-        start = clock();
 
         // Ejemplo de uso de matrices en el heap
-        size_t filas = i;
-        size_t columnas = i;
+        int filas = i;
+        int columnas = i;
 
-        Matriz<etype_t_2> A = crearMatrizAleatoria<etype_t_2>(filas, columnas);
-        Matriz<etype_t_2> B = crearMatrizAleatoria<etype_t_2>(filas, columnas);
+        // Crear matrices
+        etype_t_2** A = crearMatrizAleatoria<etype_t_2>(filas, columnas);
+        etype_t_2** B = crearMatrizAleatoria<etype_t_2>(filas, columnas);
+        etype_t_1** K = crearIntMatrizAleatoria<etype_t_1>(filas, columnas);
+        etype_t_2** C = crearMatrizAleatoria<etype_t_2>(filas, columnas);
+        etype_t_2** R = crearMatrizAleatoria<etype_t_2>(filas, columnas);
 
-        Matriz<etype_t_2> C = multiplicarMatrices<etype_t_2>(A, B, filas, columnas, columnas);
-
-        Matriz<etype_t_1> K = crearMatrizAleatoria<etype_t_1>(filas, columnas);
-
-        Matriz<etype_t_2> R = multiplicar_elemento_elemento<etype_t_2, etype_t_1>(C, K, filas, columnas);
-
-        // Finalizar medición del tiempo
-        end = clock();
+        double start_secuencial, end_secuencial;
+        start_secuencial = omp_get_wtime();
+        multiplicarMatrices<etype_t_2>(C, A, B, filas, columnas, columnas);
+        multiplicar_elemento_elemento<etype_t_2, etype_t_1>(R, C, K, filas, columnas);
+        end_secuencial = omp_get_wtime();
 
         // Imprimir el tiempo de ejecución en segundos
-        std::cout << "Tiempo de ejecución: " << static_cast<etype_t_2>(end - start) / CLOCKS_PER_SEC << " segundos." << std::endl;
+        std::cout << "Tiempo de ejecución: " << static_cast<etype_t_2>(end_secuencial - start_secuencial) << " segundos." << std::endl;
 
         // Liberar memoria de las matrices en el heap
-        liberarMatriz(A, filas);
-        liberarMatriz(B, filas);
-        liberarMatriz(C, filas);
-        liberarMatriz(K, filas);
-        liberarMatriz(R, filas);
+        liberarMatriz<etype_t_2>(A, filas);
+        liberarMatriz<etype_t_2>(B, filas);
+        liberarMatriz<etype_t_2>(C, filas);
+        liberarMatriz<etype_t_1>(K, filas);
+        liberarMatriz<etype_t_2>(R, filas);
     }
 
     return 0;
 }
-
-/*
-
-size_t filas = 3;
-size_t columnas = 3;
-
-// Medir el tiempo de ejecución para la versión secuencial
-clock_t start_secuencial, end_secuencial;
-start_secuencial = clock();
-
-Matriz<double> A = crearMatrizAleatoria<double>(filas, columnas);
-Matriz<double> B = crearMatrizAleatoria<double>(filas, columnas);
-
-Matriz<double> C_secuencial = multiplicarMatrices<double>(A, B, filas, columnas, columnas);
-
-Matriz<int> K = crearMatrizAleatoria<int>(filas, columnas);
-
-Matriz<double> R_secuencial = multiplicar_elemento_elemento<double, int>(C_secuencial, K, filas, columnas);
-
-// Finalizar medición del tiempo para la versión secuencial
-end_secuencial = clock();
-
-// Imprimir el tiempo de ejecución en segundos para la versión secuencial
-std::cout << "Tiempo de ejecución (secuencial): " << static_cast<double>(end_secuencial - start_secuencial) / CLOCKS_PER_SEC << " segundos." << std::endl;
-
-// Liberar memoria de las matrices en el heap
-liberarMatriz(A, filas);
-liberarMatriz(B, filas);
-liberarMatriz(C_secuencial, filas);
-liberarMatriz(K, filas);
-liberarMatriz(R_secuencial, filas);
-
-
-*/
