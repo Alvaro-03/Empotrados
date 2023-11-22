@@ -85,7 +85,7 @@ void transposeMatrix(double** matrix) {
 int main() {
     // Inicializar semilla para números aleatorios
     std::srand(std::time(0));
- for(MATRIX_SIZE = 100; MATRIX_SIZE < 2001; MATRIX_SIZE+=100){
+ for(MATRIX_SIZE = 1500; MATRIX_SIZE < 1501; MATRIX_SIZE+=100){
   // Crear matrices en el heap
   double** A = new double*[MATRIX_SIZE];
   double** B = new double*[MATRIX_SIZE];
