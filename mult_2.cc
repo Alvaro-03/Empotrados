@@ -3,27 +3,31 @@
 #include <ctime>
 #include <omp.h>
 
-using etype_t_2 = float;
-using etype_t_1 = char;
-
-template <typename T>
-struct Matriz {
-    T** datos;
-};
+using etype_t_2 = double;
+using etype_t_1 = int;
 
 // Función para crear una matriz y llenarla con valores aleatorios entre 0 y 1
 template <typename T>
-Matriz<T> crearMatrizAleatoria(size_t filas, size_t columnas) {
-    // Inicializar la semilla para la generación de números aleatorios
-    std::srand(static_cast<unsigned etype_t_1>(std::time(nullptr)));
+T** crearMatrizAleatoria(int filas, int columnas) {
+    T** matriz = new T*[filas];
+    for (int i = 0; i < filas; ++i) {
+        matriz[i] = new T[columnas];
+        for (int j = 0; j < columnas; ++j) {
+            matriz[i][j] = static_cast<T>(std::rand()) / RAND_MAX;
+        }
+    }
 
-    // Crear la matriz en el heap
-    Matriz<T> matriz;
-    matriz.datos = new T*[filas];
-    for (size_t i = 0; i < filas; ++i) {
-        matriz.datos[i] = new T[columnas];
-        for (size_t j = 0; j < columnas; ++j) {
-            matriz.datos[i][j] = static_cast<T>(std::rand()) / RAND_MAX;
+    return matriz;
+}
+
+// Función para crear una matriz y llenarla con valores aleatorios entre 0 y 1
+template <typename T>
+T** crearIntMatrizAleatoria(int filas, int columnas) {
+    T** matriz = new T*[filas];
+    for (int i = 0; i < filas; ++i) {
+        matriz[i] = new T[columnas];
+        for (int j = 0; j < columnas; ++j) {
+            matriz[i][j] = static_cast<T>(std::rand()) % 256;
         }
     }
 
@@ -32,156 +36,110 @@ Matriz<T> crearMatrizAleatoria(size_t filas, size_t columnas) {
 
 // Función para multiplicar dos matrices
 template <typename T>
-Matriz<T> multiplicarMatrices(const Matriz<T>& a, const Matriz<T>& b, size_t filasA, size_t columnasA, size_t columnasB) {
-    Matriz<T> resultado;
-    resultado.datos = new T*[filasA];
-    for (size_t i = 0; i < filasA; ++i) {
-        resultado.datos[i] = new T[columnasB];
-        for (size_t j = 0; j < columnasB; ++j) {
-            resultado.datos[i][j] = 0.0;
-            for (size_t k = 0; k < columnasA; ++k) {
-                resultado.datos[i][j] += a.datos[i][k] * b.datos[k][j];
+void multiplicarMatrices(T** c, T** a, T** b, int filasA, int columnasA, int columnasB) {
+    for (int i = 0; i < filasA; ++i) {
+        for (int j = 0; j < columnasB; ++j) {
+            c[i][j] = 0.0;
+            for (int k = 0; k < columnasA; ++k) {
+                c[i][j] += a[i][k] * b[k][j];
             }
         }
     }
-
-    return resultado;
 }
 
 // Función para multiplicar dos matrices (paralelizada)
 template <typename T>
-Matriz<T> multiplicarMatricesParalelo(const Matriz<T>& a, const Matriz<T>& b, size_t filasA, size_t columnasA, size_t columnasB) {
-    Matriz<T> resultado;
-    resultado.datos = new T*[filasA];
-
-
-    #pragma omp parallel for
-    for (size_t i = 0; i < filasA; ++i) {
-        resultado.datos[i] = new T[columnasB];
-        for (size_t j = 0; j < columnasB; ++j) {
-            resultado.datos[i][j] = 0.0;
-            for (size_t k = 0; k < columnasA; ++k) {
-                resultado.datos[i][j] += a.datos[i][k] * b.datos[k][j];
+void multiplicarMatricesParalelo(T** c, T** a, T** b, int filasA, int columnasA, int columnasB, int hebras) {
+    #pragma omp parallel for num_threads(hebras)
+    for (int i = 0; i < filasA; ++i) {
+        for (int j = 0; j < columnasB; ++j) {
+            c[i][j] = 0.0;
+            for (int k = 0; k < columnasA; ++k) {
+                c[i][j] += a[i][k] * b[k][j];
             }
         }
     }
-
-    return resultado;
 }
 
 // Función para multiplicar elemento por elemento
 template <typename T, typename U>
-Matriz<T> multiplicar_elemento_elemento(const Matriz<T>& a, const Matriz<U>& b, size_t filas, size_t columnas) {
-    Matriz<T> resultado;
-    resultado.datos = new T*[filas];
-    for (size_t i = 0; i < filas; ++i) {
-        resultado.datos[i] = new T[columnas];
-        for (size_t j = 0; j < columnas; ++j) {
-            resultado.datos[i][j] = a.datos[i][j] * static_cast<T>(b.datos[i][j]);
+void multiplicar_elemento_elemento(T** r, T** a, U** b, int filas, int columnas) {
+    for (int i = 0; i < filas; ++i) {
+        for (int j = 0; j < columnas; ++j) {
+            r[i][j] = a[i][j] * static_cast<T>(b[i][j]);
         }
     }
-
-    return resultado;
 }
 
 // Función para multiplicar elemento por elemento (paralelizada)
 template <typename T, typename U>
-Matriz<T> multiplicar_elemento_elemento_paralelo(const Matriz<T>& a, const Matriz<U>& b, size_t filas, size_t columnas) {
-    Matriz<T> resultado;
-    resultado.datos = new T*[filas];
-
-    #pragma omp parallel for
-    for (size_t i = 0; i < filas; ++i) {
-        resultado.datos[i] = new T[columnas];
-        for (size_t j = 0; j < columnas; ++j) {
-            resultado.datos[i][j] = a.datos[i][j] * static_cast<T>(b.datos[i][j]);
+void multiplicar_elemento_elemento_paralelo(T** r, T** a, U** b, int filas, int columnas, int hebras) {
+    #pragma omp parallel for num_threads(hebras)
+    for (int i = 0; i < filas; ++i) {
+        for (int j = 0; j < columnas; ++j) {
+            r[i][j] = a[i][j] * static_cast<T>(b[i][j]);
         }
     }
-
-    return resultado;
 }
 
 // Función para liberar la memoria de una matriz
 template <typename T>
-void liberarMatriz(Matriz<T>& matriz, size_t filas) {
-    for (size_t i = 0; i < filas; ++i) {
-        delete[] matriz.datos[i];
+void liberarMatriz(T** matriz, int filas) {
+    for (int i = 0; i < filas; ++i) {
+        delete[] matriz[i];
     }
-    delete[] matriz.datos;
+    delete[] matriz;
 }
 
 int main() {
 
-    for (int j = 1; j <= 10; j++){
-        int i = 700;
-        // Medir el tiempo de ejecución
-        clock_t start_secuencial, end_secuencial;
+    std::srand(std::time(0));
 
-        // Crear matrices y realizar operaciones
-        start_secuencial = clock();
+    // Ejemplo de uso de matrices en el heap
+    int filas = 700;
+    int columnas = 700;
 
-        // Ejemplo de uso de matrices en el heap
-        size_t filas = i;
-        size_t columnas = i;
+    // Crear matrices
+    etype_t_2** A = crearMatrizAleatoria<etype_t_2>(filas, columnas);
+    etype_t_2** B = crearMatrizAleatoria<etype_t_2>(filas, columnas);
+    etype_t_1** K = crearIntMatrizAleatoria<etype_t_1>(filas, columnas);
+    etype_t_2** C = crearMatrizAleatoria<etype_t_2>(filas, columnas);
+    etype_t_2** R = crearMatrizAleatoria<etype_t_2>(filas, columnas);
 
-        Matriz<etype_t_2> A = crearMatrizAleatoria<etype_t_2>(filas, columnas);
-        Matriz<etype_t_2> B = crearMatrizAleatoria<etype_t_2>(filas, columnas);
+    double start_secuencial, end_secuencial;
+    start_secuencial = omp_get_wtime();
+    multiplicarMatrices<etype_t_2>(C, A, B, filas, columnas, columnas);
+    multiplicar_elemento_elemento<etype_t_2, etype_t_1>(R, C, K, filas, columnas);
+    end_secuencial = omp_get_wtime();
 
-        Matriz<etype_t_2> C = multiplicarMatrices<etype_t_2>(A, B, filas, columnas, columnas);
+    // Imprimir el tiempo de ejecución en segundos
+    std::cout << "Tamaño de la matriz: " << filas << std::endl;
+    std::cout << "Tiempo de ejecución: " << static_cast<etype_t_2>(end_secuencial - start_secuencial) << " segundos." << std::endl;
 
-        Matriz<etype_t_1> K = crearMatrizAleatoria<etype_t_1>(filas, columnas);
+    for (int num_threads = 1; num_threads <= 10; num_threads++) {
+        // Medir el tiempo de ejecución para la versión paralela (Xhebra)
+        double start_Xhebra, end_Xhebra;
+        start_Xhebra = omp_get_wtime();
+        multiplicarMatricesParalelo<etype_t_2>(C, A, B, filas, columnas, columnas, num_threads);
+        multiplicar_elemento_elemento_paralelo<etype_t_2, etype_t_1>(R, C, K, filas, columnas, num_threads);
+        end_Xhebra = omp_get_wtime();
 
-        Matriz<etype_t_2> R = multiplicar_elemento_elemento<etype_t_2, etype_t_1>(C, K, filas, columnas);
-
-        // Finalizar medición del tiempo
-        end_secuencial = clock();
-
-        // Imprimir el tiempo de ejecución en segundos
-        std::cout << "Tiempo de ejecución: " << static_cast<etype_t_2>(end_secuencial - start_secuencial) / CLOCKS_PER_SEC << " segundos." << std::endl;
-
-        // Liberar memoria de las matrices en el heap
-        liberarMatriz(A, filas);
-        liberarMatriz(B, filas);
-        liberarMatriz(C, filas);
-        liberarMatriz(K, filas);
-        liberarMatriz(R, filas);
-
-        // Medir el tiempo de ejecución para la versión paralela (dos o más hebras)
-        clock_t start_multiples_hebras, end_multiples_hebras;
-        omp_set_num_threads(j);
-        std::cout << "el número de hebras es: " << j << std::endl;
-        start_multiples_hebras = clock();
-
-        Matriz<double> A_paralelo_multiples_hebras = crearMatrizAleatoria<double>(filas, columnas);
-        Matriz<double> B_paralelo_multiples_hebras = crearMatrizAleatoria<double>(filas, columnas);
-
-
-        Matriz<double> C_paralelo_multiples_hebras = multiplicarMatricesParalelo<double>(A_paralelo_multiples_hebras, B_paralelo_multiples_hebras, filas, columnas, columnas);
-
-        Matriz<int> K_paralelo_multiples_hebras = crearMatrizAleatoria<int>(filas, columnas);
-
-        Matriz<double> R_paralelo_multiples_hebras = multiplicar_elemento_elemento_paralelo<double, int>(C_paralelo_multiples_hebras, K_paralelo_multiples_hebras, filas, columnas);
-
-        // Finalizar medición del tiempo para la versión paralela (dos o más hebras)
-        end_multiples_hebras = clock();
-
-        // Imprimir el tiempo de ejecución en segundos para la versión paralela (dos o más hebras)
-        std::cout << "Tiempo de ejecución (paralelo, "<< j << " hebras): " << static_cast<double>(end_multiples_hebras - start_multiples_hebras) / CLOCKS_PER_SEC << " segundos." << std::endl;
-
-        // Liberar memoria de las matrices en el heap
-        liberarMatriz(A_paralelo_multiples_hebras, filas);
-        liberarMatriz(B_paralelo_multiples_hebras, filas);
-        liberarMatriz(C_paralelo_multiples_hebras, filas);
-        liberarMatriz(K_paralelo_multiples_hebras, filas);
-        liberarMatriz(R_paralelo_multiples_hebras, filas);
-
+        // Imprimir el tiempo de ejecución en segundos para la versión paralela (Xhebra)
+        std::cout << "Tiempo de ejecución (paralelo, " << num_threads << "): " << static_cast<double>(end_Xhebra - start_Xhebra) << " segundos." << std::endl;
         // Calcular ganancias en velocidad (speedup)
-        double speedup_multiples_hebras = static_cast<double>(end_secuencial - start_secuencial) / (end_multiples_hebras - start_multiples_hebras);
+        double speedup_multiples_hebras = static_cast<double>(end_secuencial - start_secuencial) / (end_Xhebra - start_Xhebra);
 
         // Imprimir ganancias en velocidad y eficiencia
-        std::cout << "Ganancia en velocidad (speedup) para " << j << " hebras: " << speedup_multiples_hebras << std::endl;
-        std::cout << "Eficiencia para " << j << " hebras: " << speedup_multiples_hebras/j << std::endl;
+        std::cout << "Ganancia en velocidad (speedup) para " << num_threads << " hebras: " << speedup_multiples_hebras << std::endl;
+        std::cout << "Eficiencia para " << num_threads << " hebras: " << speedup_multiples_hebras/num_threads << std::endl;
     }
+
+    // Liberar memoria de las matrices en el heap
+    liberarMatriz<etype_t_2>(A, filas);
+    liberarMatriz<etype_t_2>(B, filas);
+    liberarMatriz<etype_t_2>(C, filas);
+    liberarMatriz<etype_t_1>(K, filas);
+    liberarMatriz<etype_t_2>(R, filas);
 
     return 0;
 }
